@@ -271,6 +271,21 @@ bash "$MODULE_DIR/bin/install.sh" --repo "$S/repo" --sync-root "$S/sync" --dry-r
 assert_no_file "$S/repo/daily-loop/bin/daily-inbox-processor.sh" "dry run installed nothing"
 assert_no_file "$S/repo/daily-loop/daily-loop.conf"              "dry run wrote no config"
 
+test_case "portability: file_mtime agrees with reality on THIS platform"
+# Regression: the old chain tried BSD `stat -f` first. On Linux that SUCCEEDS (it means
+# "filesystem status" there), so the GNU fallback never ran and the lock age was garbage —
+# silently disabling stale-lock recovery on every Linux host. Assert against a known mtime.
+S="$(mktemp -d)"
+touch "$S/probe"
+EXPECTED="$(date +%s)"
+sed -n '/^file_mtime()/,/^}/p' "$MODULE_DIR/bin/daily-inbox-processor.sh" > "$S/fn.sh"
+ACTUAL="$(bash -c "source '$S/fn.sh'; file_mtime '$S/probe'" 2>/dev/null || echo "")"
+if [[ "$ACTUAL" =~ ^[0-9]+$ ]] && [[ $((EXPECTED - ACTUAL)) -le 5 ]] && [[ $((EXPECTED - ACTUAL)) -ge -5 ]]; then
+  ok "file_mtime returns a sane epoch time ($ACTUAL)"
+else
+  bad "file_mtime returns a sane epoch time" "expected ~$EXPECTED, got '$ACTUAL'"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n----------------------------------------\n'

@@ -180,6 +180,20 @@ run_with_timeout() {  # run_with_timeout <outfile> <fn> [args...] -> exit status
   wait "$pid"
 }
 
+# Modification time of a path, in epoch seconds, on both GNU and BSD userlands.
+#
+# Order matters and is NOT interchangeable. GNU `stat -f` means "filesystem status", so on
+# Linux `stat -f %m <path>` SUCCEEDS with unrelated output instead of failing — a
+# `stat -f ... || stat -c ...` chain therefore never reaches the fallback and hands back
+# garbage. Try the GNU form first (it errors cleanly on BSD, where -c doesn't exist), and
+# sanity-check that what came back is actually an integer.
+file_mtime() {  # file_mtime <path> -> epoch seconds on stdout; non-zero if undeterminable
+  local m
+  m="$(stat -c %Y "$1" 2>/dev/null)" || m="$(stat -f %m "$1" 2>/dev/null)" || return 1
+  [[ "$m" =~ ^[0-9]+$ ]] || return 1
+  printf '%s' "$m"
+}
+
 # Title-case a prompt slug for the daily heading: "meeting-notes" -> "Meeting Notes"
 pretty_name() {
   printf '%s\n' "$1" | tr '-' ' ' | awk '{ for (i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2) } 1'
@@ -596,11 +610,17 @@ mkdir -p "$DAILY_DIR" "$PROCESSED_DIR" "$(dirname "$LEDGER")"
 # left behind by a run that died mid-flight (crash, kill -9, disk full) — otherwise every
 # future run blocks forever on a lock nobody will ever release.
 if [[ -d "$LOCK_DIR" ]]; then
-  lock_age=$(( $(date +%s) - $(stat -f %m "$LOCK_DIR" 2>/dev/null || stat -c %Y "$LOCK_DIR" 2>/dev/null || echo 0) ))
-  if [[ "$lock_age" -gt "$LOCK_STALE_SECS" ]]; then
-    note "lock is ${lock_age}s old (> ${LOCK_STALE_SECS}s) — assuming stale, clearing it."
-    log_line "- ⚠️  $(now_stamp) · cleared a stale lock (${lock_age}s old) left by a prior run that never released it"
-    rmdir "$LOCK_DIR" 2>/dev/null || true
+  if lock_mtime="$(file_mtime "$LOCK_DIR")"; then
+    lock_age=$(( $(date +%s) - lock_mtime ))
+    if [[ "$lock_age" -gt "$LOCK_STALE_SECS" ]]; then
+      note "lock is ${lock_age}s old (> ${LOCK_STALE_SECS}s) — assuming stale, clearing it."
+      log_line "- ⚠️  $(now_stamp) · cleared a stale lock (${lock_age}s old) left by a prior run that never released it"
+      rmdir "$LOCK_DIR" 2>/dev/null || true
+    fi
+  else
+    # Fail SAFE: if the age is undeterminable, leave the lock alone. Clearing a lock we
+    # can't age could stomp a live run; leaving one costs a single skipped tick.
+    note "could not determine the lock's age — leaving it in place."
   fi
 fi
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
