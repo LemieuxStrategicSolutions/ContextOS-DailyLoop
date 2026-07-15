@@ -1,0 +1,92 @@
+# Daily Loop configuration — copy to <your-repo>/daily-loop/daily-loop.conf and edit.
+#
+# One file instead of exporting env vars in your scheduler. Sourced by the processor
+# before its defaults, using `: "${VAR:=value}"` so precedence is:
+#
+#     real environment  >  this file  >  built-in default
+#
+# That ordering is what lets the test harness and a one-off manual run override anything
+# here without editing it. Uncomment only what you need — every line has a working default.
+
+# --- Required-ish -----------------------------------------------------------
+
+# Only run on this machine. `hostname -s` must match. This is the single-host guard that
+# keeps a laptop from double-processing the same captures as your always-on box.
+# : "${DAILY_LOOP_ALLOWED_HOST:=my-always-on-box}"
+
+# Your IANA timezone. The daily note rolls over at midnight HERE, not on the host's clock
+# (an always-on machine in UTC otherwise splits your evening across two files).
+: "${DAILY_LOOP_TZ:=UTC}"
+
+# How the engine prompts refer to you.
+: "${DAILY_LOOP_OWNER:=the user}"
+
+# --- Adapters: memory + calendar --------------------------------------------
+# GOTCHA: a headless agent call names connectors by DISPLAY NAME (mcp__claude_ai_<Name>),
+# not the mcp__<uuid> form a desktop session shows. The uuid form silently matches nothing
+# and every unattended memory/calendar call gets permission-blocked. Use the headless name.
+#
+# Assign with `=` (not `:=`) if you want to declare a connector ABSENT: an empty value
+# means "I don't have this one", and its tools are then dropped from the allow-list rather
+# than passed as dangling names. `:=` would quietly hand back the default instead.
+#
+#   DAILY_LOOP_MEMORY_MCP=""        # <- no memory connector at all
+
+# : "${DAILY_LOOP_MEMORY_MCP:=mcp__claude_ai_Memory}"
+# : "${DAILY_LOOP_CALENDAR_MCP:=mcp__claude_ai_Google_Calendar}"
+
+# Your connector's tool VERBS. These default to one vendor's vocabulary; another calls the
+# same operation something else. Naming the connector but hardcoding its verbs is what makes
+# a loop portable in theory and broken in practice, so set these to match yours.
+# : "${DAILY_LOOP_MEMORY_CAPTURE_TOOL:=capture_thought}"   # e.g. add_memory, create_note
+# : "${DAILY_LOOP_MEMORY_SEARCH_TOOL:=search_thoughts}"    # e.g. search_memory
+# : "${DAILY_LOOP_MEMORY_LIST_TOOL:=list_thoughts}"
+# : "${DAILY_LOOP_CALENDAR_LIST_TOOL:=list_events}"
+
+# Skip the steps you have no connector for — both degrade gracefully.
+# : "${DAILY_LOOP_SYNC_DISABLED:=1}"        # skip the tasks/memory sync step
+# : "${DAILY_LOOP_SKELETON_DISABLED:=1}"    # skip the once-per-day top-of-note skeleton
+
+# --- Engine -----------------------------------------------------------------
+
+# Any CLI that does stdin -> text with a tool allow-list can be swapped in here.
+# : "${DAILY_LOOP_CLAUDE:=claude}"
+
+# Model for the MECHANICAL calls (summarize, skeleton) — a cheaper tier on purpose. The
+# judgment-heavy sync call deliberately stays on the runtime default.
+# : "${DAILY_LOOP_ENGINE_MODEL:=sonnet}"
+
+# Hard kill guard on every engine call (seconds). An unattended call that hangs forever is
+# how a scheduled loop eats a machine.
+# : "${DAILY_LOOP_ENGINE_TIMEOUT:=600}"
+
+# --- Paths (all optional; defaults derive from the repo and its parent) ------
+
+# : "${DAILY_LOOP_REPO:=/path/to/your-context-repo}"
+# : "${DAILY_LOOP_SYNC_ROOT:=/path/to/your/synced-folder}"
+# : "${DAILY_LOOP_INBOX:=${DAILY_LOOP_SYNC_ROOT}/Inbox}"
+# : "${DAILY_LOOP_PROMPTS:=${DAILY_LOOP_SYNC_ROOT}/Prompts}"
+# : "${DAILY_LOOP_DAILY:=${DAILY_LOOP_REPO}/daily}"
+# : "${DAILY_LOOP_TASKS:=${DAILY_LOOP_REPO}/trackers/TASKS.md}"
+# : "${DAILY_LOOP_PROCESSED:=${DAILY_LOOP_INBOX}/processed}"
+# : "${DAILY_LOOP_LEDGER:=${DAILY_LOOP_REPO}/daily-loop/processed.json}"
+# : "${DAILY_LOOP_LOG:=${DAILY_LOOP_REPO}/daily-loop/processor-log.md}"
+# : "${DAILY_LOOP_LOCK:=${DAILY_LOOP_REPO}/daily-loop/.processor.lock}"
+# : "${DAILY_LOOP_HEALTH_LOG:=${DAILY_LOOP_REPO}/daily-loop/host-health.log}"
+
+# --- Behavior ---------------------------------------------------------------
+
+# : "${DAILY_LOOP_BRANCH:=main}"
+# : "${DAILY_LOOP_LOCK_STALE_SECS:=1800}"   # clear a lock left by a crashed run after this
+# : "${DAILY_LOOP_PYTHON:=python3}"
+
+# A fixed daily line that needs no agent call (zero tokens).
+# : "${DAILY_LOOP_STATIC_NUDGE_HEADING:=## 🔁 Daily}"
+# : "${DAILY_LOOP_STATIC_NUDGE_TEXT:=- [ ] 10 minutes of review}"
+
+# --- Testing / debugging ----------------------------------------------------
+# Leave these unset in production. See tests/run-tests.sh.
+
+# : "${DAILY_LOOP_DRY_RUN:=1}"            # process and write locally, but never git commit/push
+# : "${DAILY_LOOP_ENGINE_STUB:=1}"        # skip the agent entirely; canned transform
+# : "${DAILY_LOOP_HEALTH_DISABLED:=1}"    # skip the host health check (it can drop an Inbox capture)

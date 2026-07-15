@@ -1,0 +1,14 @@
+name = "daily-note-page"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Non-secret config — set these for your instance.
+[vars]
+GITHUB_REPO = "your-github-user/your-context-repo"
+GITHUB_BRANCH = "main"
+DAILY_DIR = "daily"
+TZNAME = "UTC"   # your IANA timezone, e.g. "Europe/Berlin"
+
+# Secrets are NOT stored here. Set them once after deploy:
+#   wrangler secret put GITHUB_TOKEN   # fine-grained PAT, read-only Contents on YOUR private repo only
+#   wrangler secret put DAILY_KEY      # long random string the home-screen URL sends as ?key=

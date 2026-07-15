@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the processor test suite
+        run: bash tests/run-tests.sh
+      - name: Installer smoke test (dry run changes nothing)
+        run: |
+          mkdir -p /tmp/t/repo/trackers /tmp/t/sync
+          printf '# Tasks\n' > /tmp/t/repo/trackers/TASKS.md
+          bash bin/install.sh --repo /tmp/t/repo --sync-root /tmp/t/sync --dry-run
+          test ! -f /tmp/t/repo/daily-loop/daily-loop.conf
+      - name: Installer real run + preflight
+        run: bash bin/install.sh --repo /tmp/t/repo --sync-root /tmp/t/sync --owner Sam --tz UTC --memory-mcp "" --calendar-mcp ""
+      - name: Shell syntax
+        run: for f in bin/*.sh tests/*.sh; do bash -n "$f"; done
