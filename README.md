@@ -48,6 +48,13 @@ Idempotent, non-interactive, never clobbers a config or prompt you've tuned, and
 - A **git repo** with `daily/` and a task file, and a **synced folder** your phone can write into.
 - **Optional:** memory and calendar connectors. Both degrade gracefully — the loop runs without them.
 
+> **No always-on machine?** The processor is the same either way — the "always-on machine,
+> every ~15 min" line is a *deployment choice*, not a hard dependency. Where the loop must
+> survive every machine sleeping, run it **event-driven** instead: a small Worker writes
+> the capture into the repo, and the push triggers the processor on a hosted CI runner in
+> seconds. That variant isn't shipped here (it's a hosting pattern, not code), but see
+> ContextOS `ARCHITECTURE.md` → *When you outgrow the always-on machine* for the shape.
+
 ## Configuration
 
 One file, `daily-loop/daily-loop.conf` (annotated reference: [`daily-loop.conf.example`](daily-loop.conf.example)). Precedence is **environment > config file > built-in default**, so a one-off run overrides anything without editing the file.
