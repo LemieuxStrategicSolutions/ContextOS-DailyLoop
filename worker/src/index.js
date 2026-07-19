@@ -108,6 +108,7 @@ function renderPage({ date, today, found, body }) {
 
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -174,7 +175,7 @@ function mdToHtml(md) {
 function inline(s) {
   let t = esc(s);
   t = t.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
-  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, txt, href) => `<a href="${href}" rel="noopener">${txt}</a>`);
+  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, txt, href) => `<a href="${href}" rel="noopener noreferrer">${txt}</a>`);
   t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   t = t.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
   t = t.replace(/(^|\s)_([^_]+)_(?=\s|$|[.,;:!?])/g, "$1<em>$2</em>");

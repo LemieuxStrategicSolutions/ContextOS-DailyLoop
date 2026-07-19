@@ -1,6 +1,10 @@
 name = "daily-note-page"
 main = "src/index.js"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-07-01"   # bump to today's date when you deploy
+
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 # Non-secret config — set these for your instance.
 [vars]
