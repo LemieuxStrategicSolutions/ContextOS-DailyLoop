@@ -102,7 +102,7 @@ function renderPage({ date, today, found, body }) {
   const title = isToday ? "Today" : date;
 
   const content = found
-    ? mdToHtml(body)
+    ? mdToHtml(stripDailyTitle(body))
     : `<div class="empty"><p>Nothing captured for <b>${date}</b> yet.</p>
        <p class="hint">Talk into the “Daily Note” shortcut and it’ll land here within a few minutes.</p></div>`;
 
@@ -139,6 +139,20 @@ function landing() {
 // --------------------------------------------------------------------------
 // Minimal, safe markdown → HTML (escape-first; no raw HTML passthrough)
 // --------------------------------------------------------------------------
+// The sticky chrome header already shows the date, so drop the note's own
+// "# Daily — <date>" title line (keeping any inline lede after it) to avoid a
+// double title and let the lede rise directly under the header. A no-op on notes
+// that don't open with that exact title.
+function stripDailyTitle(md) {
+  return md.replace(
+    /^[ \t]*#[ \t]+Daily[ \t]+[—-][ \t]+\d{4}-\d{2}-\d{2}[ \t]*(.*)(?:\n|$)/,
+    (_, rest) => {
+      rest = rest.trim().replace(/^_([\s\S]*)_$/, "$1").trim();
+      return rest ? rest + "\n" : "";
+    }
+  );
+}
+
 function mdToHtml(md) {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const out = [];
